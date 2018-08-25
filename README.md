@@ -1,4 +1,11 @@
-# mitti 
-*Mitti is a Hindi word which means soil. This name depicts that we start from, fetch from and end in soil*
+# mitti
+## *A generic way to perform CRUD operations with HBASE or MAPRDB*
 
-## A generic way to perform CRUD operations with HBASE or MAPRDB
+-----------------
+High Level Design
+-----------------
+
+- Using this project one can perform CRUD operations from Java applications with HBase or MaprDB.
+- Entity pojo design structure should follow below convention:
+  - field names must follow pattern: **_columnfamily_column_**
+     - Type could be: String, Short, Integer, Long, Float, Double 
