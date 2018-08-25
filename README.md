@@ -105,13 +105,75 @@ hbase.zookeeper.property.clientPort=2181
   - More examples on using the CRUD operations can be seen _HbaseDriverTest_
   
 ----------------
-DRIVER FEATURES
+DRIVER APIs
 ----------------
 Hbase driver supports following operations:
+
 - addUpdate a single entity
 ```java
-public <T extends KVPersistable> boolean addUpdate(T t,
-                                                   java.lang.String queryTable,
-                                                   java.lang.Class<T> entityClass)
+public <T extends KVPersistable> boolean addUpdate(T t, java.lang.String queryTable,                                      java.lang.Class<T> entityClass)
 ```
-  
+- addUpdate a list of entities in one call
+```java
+public <T extends KVPersistable> boolean addUpdateAll(java.util.List<T> arrT, java.lang.String queryTable, java.lang.Class<T> entityClass)
+```
+- delete a row from table by rowkey
+```java
+public boolean deleteById(java.lang.String row_key, java.lang.String queryTable)
+```
+- delete rows from table based on a Filter
+```java
+public <T extends KVPersistable> boolean deleteByFilter(java.lang.String queryTable, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter)
+```
+- delete a selected list of columns under a column family for a given row key
+```java
+public boolean deleteColumnsById(java.lang.String row_key, java.lang.String queryTable, java.lang.String columnFamily, java.lang.String... columns)
+```
+- Get all rows from a table
+```java
+public <T extends KVPersistable> java.util.List<T> query(java.lang.String table, java.lang.Class<T> entityClass)
+```
+- Get row from a table based on key
+```java
+public <T extends KVPersistable> T query(java.lang.String row_key, java.lang.String table, java.lang.Class<T> entityClass)
+```
+- Get rows from a table based on matching filter
+```java
+public <T extends KVPersistable> java.util.List<T> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter)
+```
+- Get rows from a table based on matching filter and staring rowkey (inclusive)
+```java
+public <T extends KVPersistable> java.util.List<T> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter, java.lang.String startRow)
+```
+- Get row from a table based on key and provided filter
+```java
+public <T extends KVPersistable> T query(java.lang.String row_key, java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter)
+```
+- Get rows from a table based on provided filter list
+```java
+public <T extends KVPersistable> java.util.List<T> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.FilterList filterlist)
+```
+- Get rows from a table based on provided filter list with starting rowkey (inclusive) and ending rowkey (exclusive)
+```java
+public <T extends KVPersistable> java.util.List<T> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.FilterList filterlist, java.lang.String startRow, java.lang.String endRow)
+```
+- Get row from a table for given rowkey and provided filter list
+```java
+public <T extends KVPersistable> T query(java.lang.String row_key, java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.FilterList filterlist)
+```
+- Get a selected list of columns (row key included implicitly) based on provided filter
+```java
+public <T extends KVPersistable> java.util.List<java.util.Map<java.lang.String,java.lang.Object>> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter, java.lang.String... columns)
+```
+- Get a selected list of columns (row key included implicitly) for all rows
+```java
+public <T extends KVPersistable> java.util.List<java.util.Map<java.lang.String,java.lang.Object>> query(java.lang.String table, java.lang.Class<T> entityClass, java.lang.String... columns)
+```
+- Get a selected list of columns (row key included implicitly) for given row key
+```java
+public <T extends KVPersistable> java.util.Map<java.lang.String,java.lang.Object> query(java.lang.String row_key, java.lang.String table, java.lang.Class<T> entityClass, java.lang.String... columns)
+```
+- Get a selected list of columns (row key included implicitly) for rows matching with provided filter
+```java
+public <T extends KVPersistable> java.util.List<java.util.Map<java.lang.String,java.lang.Object>> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter, java.lang.String... columns)
+```
