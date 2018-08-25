@@ -89,4 +89,13 @@ public class SampleEntity implements KVPersistable {
 ```
   - Create the entity table before performing CRUD operations:
   ![create table](/src/main/resources/images/create_table.jpg?raw=true "Create Table")
+  - Update application.properties under resources as per your cluster
+```
+hbase.usemaprdb=false
+hbase.maprdb.path=maprfs:///mapr/db/warehouse/dev/
+hbase.zookeeper.quorum=localhost
+hbase.zookeeper.property.clientPort=2181
+```
+  - Run _App.java_ to test entity creation:
+  ![create entity](/src/main/resources/images/tbl_scan.png?raw=true "Create Entity")
   
