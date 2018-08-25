@@ -87,7 +87,13 @@ public class SampleEntity implements KVPersistable {
 	}
 }
 ```
- 
+-------------------
+TOOLS VERSIONS USED
+-------------------
+- JAVA: 1.8
+- HBASE: 2.0.0
+- HADOOP: 2.6.5
+
 -----------
 HOW TO USE?
 -----------
@@ -111,7 +117,7 @@ hbase.zookeeper.property.clientPort=2181
   ![create entity](/src/main/resources/images/tbl_scan.png?raw=true "Create Entity")
   
   - More examples on using the CRUD operations can be seen **_HbaseDriverTest_**
-  
+
 ----------------
 DRIVER APIs
 ----------------
