@@ -16,9 +16,9 @@ High Level Design
   - Declare getter/setter methods for all fields
   - Entity POJO MUST implement _KVPersistable_ interface
   - Have a look @ class com.mitti.models.SampleEntity
-  
-  ```java
-  @DynamicColumnFamily(fields = { "varcf" })
+
+```java
+@DynamicColumnFamily(fields = { "varcf" })
 public class SampleEntity implements KVPersistable {
 
 	private String row_key;
@@ -86,5 +86,5 @@ public class SampleEntity implements KVPersistable {
 		this.varcf = varcf;
 	}
 }
-    ```
+```
   
