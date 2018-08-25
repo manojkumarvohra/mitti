@@ -88,5 +88,5 @@ public class SampleEntity implements KVPersistable {
 }
 ```
   - Create the entity table before performing CRUD operations:
-  ![create table](https://github.com/manojkumarvohra/mitti/blob/master/src/main/resources/images/create%20table.jpg)
+  ![create table](/src/main/resources/images/create_table.jpg?raw=true "Create Table")
   
