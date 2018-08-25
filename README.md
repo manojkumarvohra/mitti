@@ -2,7 +2,7 @@
 ## *A generic way to perform CRUD operations with HBASE or MAPRDB*
 
 -----------------
-High Level Design
+POJO Design
 -----------------
 
 - Using this project one can perform CRUD operations from Java applications with HBase or MaprDB.
@@ -11,8 +11,8 @@ High Level Design
      - Type could be: _String, Short, Integer, Long, Float, Double_ 
   - if any column family is supposed to take variable number or name of columns (which are not known upfront) so as to follow dynamic schema, then that field has to be defined as a **_Map<String,String>_**
     - Field Naming structure for these would be **_columnfamily_**
-    - Entity class MUST be annotated with: @DynamicColumnFamily
-        - the field MUST be added to fields array of @DynamicColumnFamily
+    - Entity class MUST be annotated with: _@DynamicColumnFamily_
+        - the field MUST be added to **fields** array of _@DynamicColumnFamily_
   - Declare getter/setter methods for all fields
   - Entity POJO MUST implement _KVPersistable_ interface
   - Have a look @ class com.mitti.models.SampleEntity
@@ -87,6 +87,9 @@ public class SampleEntity implements KVPersistable {
 	}
 }
 ```
+-----------------
+TEST APPLICATION
+-----------------
   - Create the entity table before performing CRUD operations:
   ![create table](/src/main/resources/images/create_table.jpg?raw=true "Create Table")
   - Update application.properties under resources as per your cluster
@@ -98,4 +101,17 @@ hbase.zookeeper.property.clientPort=2181
 ```
   - Run _App.java_ to test entity creation:
   ![create entity](/src/main/resources/images/tbl_scan.png?raw=true "Create Entity")
+  
+  - More examples on using the CRUD operations can be seen _HbaseDriverTest_
+  
+----------------
+DRIVER FEATURES
+----------------
+Hbase driver supports following operations:
+- addUpdate a single entity
+```java
+public <T extends KVPersistable> boolean addUpdate(T t,
+                                                   java.lang.String queryTable,
+                                                   java.lang.Class<T> entityClass)
+```
   
