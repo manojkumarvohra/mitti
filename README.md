@@ -87,6 +87,14 @@ public class SampleEntity implements KVPersistable {
 	}
 }
 ```
+ 
+-----------
+HOW TO USE?
+-----------
+- Build the maven project.
+- Use the mitti-hbase-0.0.1.jar in your projects as dependency.
+- Instantiate HbaseDriver class and use it for CRUD operations.
+
 -----------------
 TEST APPLICATION
 -----------------
@@ -102,7 +110,7 @@ hbase.zookeeper.property.clientPort=2181
   - Run _App.java_ to test entity creation:
   ![create entity](/src/main/resources/images/tbl_scan.png?raw=true "Create Entity")
   
-  - More examples on using the CRUD operations can be seen _HbaseDriverTest_
+  - More examples on using the CRUD operations can be seen **_HbaseDriverTest_**
   
 ----------------
 DRIVER APIs
