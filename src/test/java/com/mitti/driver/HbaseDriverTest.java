@@ -79,7 +79,7 @@ public class HbaseDriverTest {
 			Map<String, String> groupedMap1 = new HashMap<String, String>();
 			groupedMap1.put("23", "Calcutta");
 			groupedMap1.put("14", "Dilli");
-			testEntity1.setVarcf_map(groupedMap1);
+			testEntity1.setVarcf(groupedMap1);
 
 			testEntity2 = new SampleEntity();
 			testEntity2.setRow_key("2");
@@ -89,7 +89,7 @@ public class HbaseDriverTest {
 			Map<String, String> groupedMap2 = new HashMap<String, String>();
 			groupedMap2.put("23", "Kolkata");
 			groupedMap2.put("14", "Delhi");
-			testEntity2.setVarcf_map(groupedMap2);
+			testEntity2.setVarcf(groupedMap2);
 
 			/*
 			 * TESTING ENTITY CREATION
@@ -115,7 +115,7 @@ public class HbaseDriverTest {
 			Map<String, String> groupedMap3 = new HashMap<String, String>();
 			groupedMap3.put("43", "Calcutta");
 			groupedMap3.put("54", "Dilli");
-			testEntity3.setVarcf_map(groupedMap3);
+			testEntity3.setVarcf(groupedMap3);
 
 			testEntity4 = new SampleEntity();
 			testEntity4.setRow_key("4");
@@ -125,7 +125,7 @@ public class HbaseDriverTest {
 			Map<String, String> groupedMap4 = new HashMap<String, String>();
 			groupedMap4.put("73", "Shimla");
 			groupedMap4.put("94", "Manali");
-			testEntity4.setVarcf_map(groupedMap4);
+			testEntity4.setVarcf(groupedMap4);
 
 			testEntity5 = new SampleEntity();
 			testEntity5.setRow_key("5");
@@ -135,7 +135,7 @@ public class HbaseDriverTest {
 			Map<String, String> groupedMap5 = new HashMap<String, String>();
 			groupedMap5.put("73", "Bhatinda");
 			groupedMap5.put("94", "Kenchi");
-			testEntity5.setVarcf_map(groupedMap5);
+			testEntity5.setVarcf(groupedMap5);
 
 			List<SampleEntity> SampleEntities = Arrays.asList(testEntity3, testEntity4, testEntity5);
 
@@ -216,7 +216,7 @@ public class HbaseDriverTest {
 		// TEST: no other columns are being fetched
 		assertNull(fetchedTestEntity.getBasic_age());
 		assertNull(fetchedTestEntity.getOther_entity_score());
-		assertNull(fetchedTestEntity.getVarcf_map());
+		assertNull(fetchedTestEntity.getVarcf());
 
 		// TEST: only row_key and name columns are being fetched
 		assertNotNull(fetchedTestEntity.get_Row_key());
@@ -231,7 +231,7 @@ public class HbaseDriverTest {
 	public void shouldGetSelectedColumnsAsMap() {
 
 		List<Map<String, Object>> actualEntities = hBaseDriver.query(ENTITY_TABLE, SampleEntity.class, "name", "age",
-				"varcf_map");
+				"varcf");
 		assertThat(actualEntities.size(), is(5));
 
 		Map<String, Object> fetchedTestEntity = actualEntities.get(0);
@@ -243,7 +243,7 @@ public class HbaseDriverTest {
 		assertNotNull(fetchedTestEntity.get("row_key"));
 		assertNotNull(fetchedTestEntity.get("age"));
 		assertNotNull(fetchedTestEntity.get("name"));
-		assertNotNull(fetchedTestEntity.get("varcf_map"));
+		assertNotNull(fetchedTestEntity.get("varcf"));
 	}
 
 	/*

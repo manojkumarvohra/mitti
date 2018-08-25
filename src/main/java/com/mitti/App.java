@@ -37,7 +37,7 @@ public class App {
 		Map<String, String> variableFields = new HashedMap<String, String>();
 		variableFields.put("op", "23");
 		variableFields.put("bi", "yuw");
-		sampleEntity.setVarcf_map(variableFields);
+		sampleEntity.setVarcf(variableFields);
 		driver.addUpdate(sampleEntity, "tbl_entity", SampleEntity.class);
 		
 		//For more examples check the HbaseDriverTest

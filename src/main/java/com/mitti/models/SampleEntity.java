@@ -11,7 +11,7 @@ import com.mitti.common.DynamicColumnFamily;
 // Annotate class with @DynamicColumnFamily if class contains fields which
 // map variable set of columns under a column family. Provide name of the
 // corresponding class fields in the annotation fields array.
-@DynamicColumnFamily(fields = { "varcf_map" })
+@DynamicColumnFamily(fields = { "varcf" })
 public class SampleEntity implements KVPersistable {
 
 	private String row_key;
@@ -35,7 +35,7 @@ public class SampleEntity implements KVPersistable {
 	 * ColumnFamily: varcf Column: this can support variable number of columns by
 	 * this declaration. This would help in cases for flexible schema.
 	 */
-	private Map<String, String> varcf_map;
+	private Map<String, String> varcf;
 
 	@Override
 	public String get_Row_key() {
@@ -71,12 +71,12 @@ public class SampleEntity implements KVPersistable {
 		this.other_entity_score = other_entity_score;
 	}
 
-	public Map<String, String> getVarcf_map() {
-		return varcf_map;
+	public Map<String, String> getVarcf() {
+		return varcf;
 	}
 
-	public void setVarcf_map(Map<String, String> varcf_map) {
-		this.varcf_map = varcf_map;
+	public void setVarcf(Map<String, String> varcf) {
+		this.varcf = varcf;
 	}
 
 	@Override
@@ -87,7 +87,7 @@ public class SampleEntity implements KVPersistable {
 		result = prime * result + ((basic_name == null) ? 0 : basic_name.hashCode());
 		result = prime * result + ((other_entity_score == null) ? 0 : other_entity_score.hashCode());
 		result = prime * result + ((row_key == null) ? 0 : row_key.hashCode());
-		result = prime * result + ((varcf_map == null) ? 0 : varcf_map.hashCode());
+		result = prime * result + ((varcf == null) ? 0 : varcf.hashCode());
 		return result;
 	}
 
@@ -120,10 +120,10 @@ public class SampleEntity implements KVPersistable {
 				return false;
 		} else if (!row_key.equals(other.row_key))
 			return false;
-		if (varcf_map == null) {
-			if (other.varcf_map != null)
+		if (varcf == null) {
+			if (other.varcf != null)
 				return false;
-		} else if (!varcf_map.equals(other.varcf_map))
+		} else if (!varcf.equals(other.varcf))
 			return false;
 		return true;
 	}
@@ -131,6 +131,6 @@ public class SampleEntity implements KVPersistable {
 	@Override
 	public String toString() {
 		return "SampleEntity [row_key=" + row_key + ", basic_name=" + basic_name + ", basic_age=" + basic_age
-				+ ", other_entity_score=" + other_entity_score + ", varcf_map=" + varcf_map + "]";
+				+ ", other_entity_score=" + other_entity_score + ", varcf=" + varcf + "]";
 	}
 }

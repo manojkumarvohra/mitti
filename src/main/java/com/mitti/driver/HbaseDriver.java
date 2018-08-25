@@ -189,7 +189,6 @@ public class HbaseDriver {
 					String family_column_string = methodName.split(GETTER_METHOD_PREFIX, 2)[1].toLowerCase();
 					String[] familyAndColumn = family_column_string.split(UNDERSCORE, 2);
 					String family = familyAndColumn[0];
-					String column = familyAndColumn[1];
 
 					if (groupedFamilies.contains(family) && groupedFields.contains(family_column_string)) {
 
@@ -199,6 +198,7 @@ public class HbaseDriver {
 							p.addColumn(Bytes.toBytes(family), Bytes.toBytes(columnName), Bytes.toBytes(columnValue));
 						}
 					} else {
+						String column = familyAndColumn[1];
 						p.addColumn(Bytes.toBytes(family), Bytes.toBytes(column), Bytes.toBytes(value.toString()));
 					}
 				}
