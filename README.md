@@ -119,7 +119,7 @@ hbase.zookeeper.property.clientPort=2181
   - Run _App.java_ to test entity creation:
   ![create entity](/src/main/resources/images/tbl_scan.png?raw=true "Create Entity")
   
-  - More examples on using the CRUD operations can be seen **_HbaseDriverTest_**
+  - More examples on using the CRUD operations can be seen in **_HbaseDriverTest_**
 
 ----------------
 DRIVER APIs
@@ -194,3 +194,8 @@ public <T extends KVPersistable> java.util.Map<java.lang.String,java.lang.Object
 ```java
 public <T extends KVPersistable> java.util.List<java.util.Map<java.lang.String,java.lang.Object>> query(java.lang.String table, java.lang.Class<T> entityClass, org.apache.hadoop.hbase.filter.Filter filter, java.lang.String... columns)
 ```
+
+--------------------
+OTHER CONSIDERATIONS
+--------------------
+- HBASE Connection is thread safe and is a very heavy object. It's recommended to use a single connection through out the application.
