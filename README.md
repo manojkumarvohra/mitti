@@ -87,4 +87,6 @@ public class SampleEntity implements KVPersistable {
 	}
 }
 ```
+  - Create the entity table before performing CRUD operations:
+  ![create table](src/main/resources/create table.jpg)
   
