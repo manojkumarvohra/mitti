@@ -1,4 +1,5 @@
 # mitti
+_mitti is a hindi word which means soil. Soil supports variety and large number of families. We start from, fetch from and finally end in soil_
 ## *A generic way to perform CRUD operations with HBASE or MAPRDB*
 
 -----------------
@@ -15,6 +16,8 @@ POJO Design
         - the field MUST be added to **fields** array of _@DynamicColumnFamily_
   - Declare getter/setter methods for all fields
   - Entity POJO MUST implement _KVPersistable_ interface
+  - You can define getters starting with **get_** these methods would be ignored by driver
+  	- You are also free to define other utility methods if required which dont start with **get** or **set** 
   - Have a look @ class com.mitti.models.SampleEntity
 
 ```java
