@@ -1,5 +1,4 @@
 # mitti
-_mitti is a hindi word which means soil. Soil supports variety and large number of families. We start from, fetch from and finally end in soil_
 ## *A generic way to perform CRUD operations with HBASE or MAPRDB*
 
 -----------------
