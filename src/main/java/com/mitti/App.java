@@ -22,24 +22,26 @@ public class App {
 
 		Configuration config = HBaseConfiguration.create();
 		config.set("hbase.zookeeper.quorum", properties.getProperty("hbase.zookeeper.quorum"));
-		config.set("hbase.zookeeper.property.clientPort", properties.getProperty("hbase.zookeeper.property.clientPort"));
+		config.set("hbase.zookeeper.property.clientPort",
+				properties.getProperty("hbase.zookeeper.property.clientPort"));
 
 		Connection connection = ConnectionFactory.createConnection(config);
-		
+
 		HbaseDriver driver = new HbaseDriver(connection, properties);
-		
-		//Create - Update sample entity
+
+		// Create - Update sample entity
 		SampleEntity sampleEntity = new SampleEntity();
 		sampleEntity.setRow_key("1");
 		sampleEntity.setBasic_age(20);
 		sampleEntity.setBasic_name("first name");
 		sampleEntity.setOther_entity_score(21.99F);
+		sampleEntity.setOther_done_flag(true);
 		Map<String, String> variableFields = new HashedMap<String, String>();
 		variableFields.put("op", "23");
 		variableFields.put("bi", "yuw");
 		sampleEntity.setVarcf(variableFields);
 		driver.addUpdate(sampleEntity, "tbl_entity", SampleEntity.class);
-		
-		//For more examples check the HbaseDriverTest
+
+		// For more examples check the HbaseDriverTest
 	}
 }

@@ -6,6 +6,6 @@ package com.mitti.models;
  * Base interface to be  implemented by all entities to be persisted to HBase as Key Value association
  */
 public interface KVPersistable {
-	String get_Row_key();
+	String getRow_key();
 	void setRow_key(String row_key);
 }

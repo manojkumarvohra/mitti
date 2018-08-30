@@ -8,7 +8,7 @@ POJO Design
 - Using this project one can perform CRUD operations from Java applications with HBase or MaprDB.
 - Entity pojo design structure should follow below convention:
   - field names must follow pattern: **_columnfamily_column_**
-     - Type could be: _String, Short, Integer, Long, Float, Double_ 
+     - Type could be: _String, Short, Integer, Long, Float, Double, Boolean_ 
   - if any column family is supposed to take variable number or name of columns (which are not known upfront) so as to follow dynamic schema, then that field has to be defined as a **_Map<String,String>_**
     - Field Naming structure for these would be **_columnfamily_**
     - Entity class MUST be annotated with: _@DynamicColumnFamily_
@@ -39,13 +39,18 @@ public class SampleEntity implements KVPersistable {
 	private Float other_entity_score;
 
 	/*
+	 * ColumnFamily: other Column: done_flag
+	 */
+	private Boolean other_done_flag;
+
+	/*
 	 * ColumnFamily: varcf Column: this can support variable number of columns by
 	 * this declaration. This would help in cases for flexible schema.
 	 */
 	private Map<String, String> varcf;
 
 	@Override
-	public String get_Row_key() {
+	public String getRow_key() {
 		return row_key;
 	}
 
@@ -76,6 +81,14 @@ public class SampleEntity implements KVPersistable {
 
 	public void setOther_entity_score(Float other_entity_score) {
 		this.other_entity_score = other_entity_score;
+	}
+
+	public Boolean getOther_done_flag() {
+		return other_done_flag;
+	}
+
+	public void setOther_done_flag(Boolean other_done_flag) {
+		this.other_done_flag = other_done_flag;
 	}
 
 	public Map<String, String> getVarcf() {

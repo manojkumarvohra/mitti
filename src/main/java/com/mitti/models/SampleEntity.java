@@ -32,13 +32,18 @@ public class SampleEntity implements KVPersistable {
 	private Float other_entity_score;
 
 	/*
+	 * ColumnFamily: other Column: done_flag
+	 */
+	private Boolean other_done_flag;
+
+	/*
 	 * ColumnFamily: varcf Column: this can support variable number of columns by
 	 * this declaration. This would help in cases for flexible schema.
 	 */
 	private Map<String, String> varcf;
 
 	@Override
-	public String get_Row_key() {
+	public String getRow_key() {
 		return row_key;
 	}
 
@@ -79,12 +84,21 @@ public class SampleEntity implements KVPersistable {
 		this.varcf = varcf;
 	}
 
+	public Boolean getOther_done_flag() {
+		return other_done_flag;
+	}
+
+	public void setOther_done_flag(Boolean other_done_flag) {
+		this.other_done_flag = other_done_flag;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((basic_age == null) ? 0 : basic_age.hashCode());
 		result = prime * result + ((basic_name == null) ? 0 : basic_name.hashCode());
+		result = prime * result + ((other_done_flag == null) ? 0 : other_done_flag.hashCode());
 		result = prime * result + ((other_entity_score == null) ? 0 : other_entity_score.hashCode());
 		result = prime * result + ((row_key == null) ? 0 : row_key.hashCode());
 		result = prime * result + ((varcf == null) ? 0 : varcf.hashCode());
@@ -110,6 +124,11 @@ public class SampleEntity implements KVPersistable {
 				return false;
 		} else if (!basic_name.equals(other.basic_name))
 			return false;
+		if (other_done_flag == null) {
+			if (other.other_done_flag != null)
+				return false;
+		} else if (!other_done_flag.equals(other.other_done_flag))
+			return false;
 		if (other_entity_score == null) {
 			if (other.other_entity_score != null)
 				return false;
@@ -131,6 +150,7 @@ public class SampleEntity implements KVPersistable {
 	@Override
 	public String toString() {
 		return "SampleEntity [row_key=" + row_key + ", basic_name=" + basic_name + ", basic_age=" + basic_age
-				+ ", other_entity_score=" + other_entity_score + ", varcf=" + varcf + "]";
+				+ ", other_entity_score=" + other_entity_score + ", other_done_flag=" + other_done_flag + ", varcf="
+				+ varcf + "]";
 	}
 }

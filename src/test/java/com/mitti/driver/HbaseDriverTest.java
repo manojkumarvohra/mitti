@@ -66,7 +66,7 @@ public class HbaseDriverTest {
 			List<SampleEntity> testEntities = hBaseDriver.query(ENTITY_TABLE, SampleEntity.class);
 
 			for (SampleEntity testEntity : testEntities) {
-				boolean deleteResult = hBaseDriver.deleteById(testEntity.get_Row_key(), ENTITY_TABLE);
+				boolean deleteResult = hBaseDriver.deleteById(testEntity.getRow_key(), ENTITY_TABLE);
 				assertThat(deleteResult, is(true));
 			}
 
@@ -76,6 +76,7 @@ public class HbaseDriverTest {
 			testEntity1.setBasic_age(18);
 			testEntity1.setBasic_name("Kishore Kumar");
 			testEntity1.setOther_entity_score(21.33F);
+			testEntity1.setOther_done_flag(true);
 			Map<String, String> groupedMap1 = new HashMap<String, String>();
 			groupedMap1.put("23", "Calcutta");
 			groupedMap1.put("14", "Dilli");
@@ -86,6 +87,7 @@ public class HbaseDriverTest {
 			testEntity2.setBasic_age(25);
 			testEntity2.setBasic_name("Arijit Singh");
 			testEntity2.setOther_entity_score(51.728F);
+			testEntity2.setOther_done_flag(false);
 			Map<String, String> groupedMap2 = new HashMap<String, String>();
 			groupedMap2.put("23", "Kolkata");
 			groupedMap2.put("14", "Delhi");
@@ -112,6 +114,7 @@ public class HbaseDriverTest {
 			testEntity3.setBasic_age(28);
 			testEntity3.setBasic_name("Sonu Nigam");
 			testEntity3.setOther_entity_score(31.7F);
+			testEntity3.setOther_done_flag(true);
 			Map<String, String> groupedMap3 = new HashMap<String, String>();
 			groupedMap3.put("43", "Calcutta");
 			groupedMap3.put("54", "Dilli");
@@ -122,6 +125,7 @@ public class HbaseDriverTest {
 			testEntity4.setBasic_age(55);
 			testEntity4.setBasic_name("Mohammed Rafi");
 			testEntity4.setOther_entity_score(617.48F);
+			testEntity4.setOther_done_flag(false);
 			Map<String, String> groupedMap4 = new HashMap<String, String>();
 			groupedMap4.put("73", "Shimla");
 			groupedMap4.put("94", "Manali");
@@ -132,6 +136,7 @@ public class HbaseDriverTest {
 			testEntity5.setBasic_age(55);
 			testEntity5.setBasic_name("Mohammed Shami");
 			testEntity5.setOther_entity_score(1007.9F);
+			testEntity5.setOther_done_flag(true);
 			Map<String, String> groupedMap5 = new HashMap<String, String>();
 			groupedMap5.put("73", "Bhatinda");
 			groupedMap5.put("94", "Kenchi");
@@ -219,7 +224,7 @@ public class HbaseDriverTest {
 		assertNull(fetchedTestEntity.getVarcf());
 
 		// TEST: only row_key and name columns are being fetched
-		assertNotNull(fetchedTestEntity.get_Row_key());
+		assertNotNull(fetchedTestEntity.getRow_key());
 		assertNotNull(fetchedTestEntity.getBasic_name());
 	}
 

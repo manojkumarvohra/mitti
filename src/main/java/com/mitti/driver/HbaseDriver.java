@@ -15,6 +15,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -46,6 +47,7 @@ import com.mitti.models.KVPersistable;
 @SuppressWarnings("deprecation")
 public class HbaseDriver {
 
+	private static final String GET_ROW_KEY = "getRow_key";
 	private static final String FAILED_TO_SET_FIELD_VALUE = "Failed to set field value against setter method:";
 	private static final String ROW_KEY = "row_key";
 	private static final String NO_MATCHING_RECORD_FOUND_BY_ID_IN_TABLE = "No matching record found by Id: %s in table: %s";
@@ -166,7 +168,7 @@ public class HbaseDriver {
 
 		Put p = null;
 
-		String row_key = t.get_Row_key();
+		String row_key = t.getRow_key();
 		if (row_key != null) {
 			p = new Put(Bytes.toBytes(row_key.toString()));
 		} else {
@@ -176,33 +178,36 @@ public class HbaseDriver {
 
 		Method[] allMethods = entityClass.getDeclaredMethods();
 
-		for (Method method : allMethods) {
+		List<Method> methods = Arrays.stream(allMethods)
+				.filter(m -> (m.getName().startsWith(GETTER_METHOD_PREFIX)
+						&& !m.getName().startsWith(GETTER_METHOD_PREFIX + UNDERSCORE)
+						&& !(m.getName().equals(GET_ROW_KEY))))
+				.collect(Collectors.toList());
+
+		for (Method method : methods) {
 
 			String methodName = method.getName();
 
-			if (methodName.startsWith(GETTER_METHOD_PREFIX)
-					&& !methodName.startsWith(GETTER_METHOD_PREFIX + UNDERSCORE)) {
+			Object value = method.invoke(t);
 
-				Object value = method.invoke(t);
+			if (value != null) {
+				String family_column_string = methodName.split(GETTER_METHOD_PREFIX, 2)[1].toLowerCase();
+				String[] familyAndColumn = family_column_string.split(UNDERSCORE, 2);
+				String family = familyAndColumn[0];
 
-				if (value != null) {
-					String family_column_string = methodName.split(GETTER_METHOD_PREFIX, 2)[1].toLowerCase();
-					String[] familyAndColumn = family_column_string.split(UNDERSCORE, 2);
-					String family = familyAndColumn[0];
+				if (groupedFamilies.contains(family) && groupedFields.contains(family_column_string)) {
 
-					if (groupedFamilies.contains(family) && groupedFields.contains(family_column_string)) {
-
-						Map<String, String> columnValuesMap = (Map<String, String>) value;
-						for (String columnName : columnValuesMap.keySet()) {
-							String columnValue = columnValuesMap.get(columnName);
-							p.addColumn(Bytes.toBytes(family), Bytes.toBytes(columnName), Bytes.toBytes(columnValue));
-						}
-					} else {
-						String column = familyAndColumn[1];
-						p.addColumn(Bytes.toBytes(family), Bytes.toBytes(column), Bytes.toBytes(value.toString()));
+					Map<String, String> columnValuesMap = (Map<String, String>) value;
+					for (String columnName : columnValuesMap.keySet()) {
+						String columnValue = columnValuesMap.get(columnName);
+						p.addColumn(Bytes.toBytes(family), Bytes.toBytes(columnName), Bytes.toBytes(columnValue));
 					}
+				} else {
+					String column = familyAndColumn[1];
+					p.addColumn(Bytes.toBytes(family), Bytes.toBytes(column), Bytes.toBytes(value.toString()));
 				}
 			}
+
 		}
 		return p;
 	}
@@ -220,7 +225,7 @@ public class HbaseDriver {
 			for (T t : entities) {
 				String row_key = null;
 				try {
-					row_key = t.get_Row_key();
+					row_key = t.getRow_key();
 					Delete delete = new Delete(Bytes.toBytes(row_key));
 					table.delete(delete);
 				} catch (Exception e) {
@@ -1000,6 +1005,9 @@ public class HbaseDriver {
 
 		case "Float":
 			return Float.valueOf(valueToBeSet);
+
+		case "Boolean":
+			return Boolean.valueOf(valueToBeSet);
 
 		default:
 			throw new IllegalArgumentException("Unsupported Field Type: " + type + " Value: [" + valueToBeSet + "]");
