@@ -189,6 +189,7 @@ public class HbaseDriver {
 						&& !m.getName().startsWith(GETTER_METHOD_PREFIX + UNDERSCORE)
 						&& !(m.getName().equals(GET_ROW_KEY))))
 				.collect(Collectors.toList());
+		methods.stream().forEach(m -> m.setAccessible(true));
 		return methods;
 	}
 
@@ -791,6 +792,7 @@ public class HbaseDriver {
 
 		Method[] methods = entityClass.getDeclaredMethods();
 		Arrays.stream(methods).filter(m -> m.getName().startsWith(SETTER_METHOD_PREFIX)).forEach((m -> {
+			m.setAccessible(true);
 			setterMethodsMap.put(m.getName(), m);
 			String expectedParameterTypeName = m.getParameterTypes()[0].getSimpleName();
 			parameterMethodsMap.put(m.getName(), expectedParameterTypeName);
