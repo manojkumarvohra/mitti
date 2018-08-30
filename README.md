@@ -8,15 +8,13 @@ POJO Design
 - Using this project one can perform CRUD operations from Java applications with HBase or MaprDB.
 - Entity pojo design structure should follow below convention:
   - field names must follow pattern: **_columnfamily_column_**
-     - Type could be: _String, Short, Integer, Long, Float, Double, Boolean_ 
+     - Type could be: _String, short, Short, int, Integer, long, Long, float, Float, double, Double, boolean, Boolean_ 
   - if any column family is supposed to take variable number or name of columns (which are not known upfront) so as to follow dynamic schema, then that field has to be defined as a **_Map<String,String>_**
     - Field Naming structure for these would be **_columnfamily_**
     - Entity class MUST be annotated with: _@DynamicColumnFamily_
         - the field MUST be added to **fields** array of _@DynamicColumnFamily_
   - Declare getter/setter methods for all fields
   - Entity POJO MUST implement _KVPersistable_ interface
-  - You can define getters starting with **get_** these methods would be ignored by driver
-  	- You are also free to define other utility methods if required which dont start with **get** or **set** 
   - Have a look @ class com.mitti.models.SampleEntity
 
 ```java
@@ -33,12 +31,12 @@ public class SampleEntity implements KVPersistable {
 	/*
 	 * ColumnFamily: basic Column: age
 	 */
-	private Integer basic_age;
+	private int basic_age;
 
 	/*
 	 * ColumnFamily: other Column: entity_score
 	 */
-	private Float other_entity_score;
+	private float other_entity_score;
 
 	/*
 	 * ColumnFamily: other Column: done_flag
@@ -50,6 +48,14 @@ public class SampleEntity implements KVPersistable {
 	 * this declaration. This would help in cases for flexible schema.
 	 */
 	private Map<String, String> varcf;
+
+	/*
+	 * ColumnFamily: varcf Column: fixed_value
+	 * 
+	 * Dynamic column family may also contain fixed fields apart from variable
+	 * fields
+	 */
+	private String varcf_fixed_value;
 
 	@Override
 	public String getRow_key() {
@@ -69,20 +75,28 @@ public class SampleEntity implements KVPersistable {
 		this.basic_name = basic_name;
 	}
 
-	public Integer getBasic_age() {
+	public int getBasic_age() {
 		return basic_age;
 	}
 
-	public void setBasic_age(Integer basic_age) {
+	public void setBasic_age(int basic_age) {
 		this.basic_age = basic_age;
 	}
 
-	public Float getOther_entity_score() {
+	public float getOther_entity_score() {
 		return other_entity_score;
 	}
 
-	public void setOther_entity_score(Float other_entity_score) {
+	public void setOther_entity_score(float other_entity_score) {
 		this.other_entity_score = other_entity_score;
+	}
+
+	public Map<String, String> getVarcf() {
+		return varcf;
+	}
+
+	public void setVarcf(Map<String, String> varcf) {
+		this.varcf = varcf;
 	}
 
 	public Boolean getOther_done_flag() {
@@ -93,12 +107,12 @@ public class SampleEntity implements KVPersistable {
 		this.other_done_flag = other_done_flag;
 	}
 
-	public Map<String, String> getVarcf() {
-		return varcf;
+	public String getVarcf_fixed_value() {
+		return varcf_fixed_value;
 	}
 
-	public void setVarcf(Map<String, String> varcf) {
-		this.varcf = varcf;
+	public void setVarcf_fixed_value(String varcf_fixed_value) {
+		this.varcf_fixed_value = varcf_fixed_value;
 	}
 }
 ```
@@ -140,7 +154,7 @@ Hbase driver supports following operations:
 
 - addUpdate a single entity
 ```java
-public <T extends KVPersistable> boolean addUpdate(T t, java.lang.String queryTable,                                      java.lang.Class<T> entityClass)
+public <T extends KVPersistable> boolean addUpdate(T t, java.lang.String queryTable, java.lang.Class<T> entityClass)
 ```
 - addUpdate a list of entities in one call
 ```java

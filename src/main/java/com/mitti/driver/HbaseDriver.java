@@ -1,8 +1,8 @@
 package com.mitti.driver;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,7 +17,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -48,7 +47,6 @@ import com.mitti.models.KVPersistable;
 @SuppressWarnings("deprecation")
 public class HbaseDriver {
 
-	private static final String GET_ROW_KEY = "getRow_key";
 	private static final String FAILED_TO_SET_FIELD_VALUE = "Failed to set field value against setter method:";
 	private static final String ROW_KEY = "row_key";
 	private static final String NO_MATCHING_RECORD_FOUND_BY_ID_IN_TABLE = "No matching record found by Id: %s in table: %s";
@@ -59,8 +57,6 @@ public class HbaseDriver {
 	private static final String EXCEPTION_OCCURED_WHILE_CLOSING_TABLE = "Exception Occured While Closing Table: ";
 	private static final String EXCEPTION_OCCURED_WHILE_INSERTING_UPDATING_DATA = "Exception Occured While Inserting/Updating Data: ";
 	private static final String UNDERSCORE = "_";
-	private static final String GETTER_METHOD_PREFIX = "get";
-	private static final String SETTER_METHOD_PREFIX = "set";
 	private static final String EXCEPTION_OCCURED_WHILE_BUILDING_OBJECT_FOR = "Exception Occured While Building Object: ";
 
 	private Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -101,15 +97,14 @@ public class HbaseDriver {
 			}
 		}
 
-		List<Method> methods = getApplicableGetterMethods(entityClass);
-
+		List<Field> fields = getApplicableFields(entityClass);
 		Table table = null;
 		boolean addUpdateDone = false;
 
 		try {
 
 			table = connection.getTable(TableName.valueOf(tablePrefix + queryTable));
-			Put p = prepareAndGetPut(t, entityClass, groupedFamilies, groupedFields, methods);
+			Put p = prepareAndGetPut(t, entityClass, groupedFamilies, groupedFields, fields);
 			table.put(p);
 			addUpdateDone = true;
 		} catch (NullPointerException e) {
@@ -148,7 +143,7 @@ public class HbaseDriver {
 			}
 		}
 
-		List<Method> methods = getApplicableGetterMethods(entityClass);
+		List<Field> fields = getApplicableFields(entityClass);
 
 		Table table = null;
 		boolean addUpdateDone = false;
@@ -159,7 +154,7 @@ public class HbaseDriver {
 			List<Put> allPuts = new ArrayList<Put>();
 			for (T t : arrT) {
 				currentT = t;
-				Put p = prepareAndGetPut(t, entityClass, groupedFamilies, groupedFields, methods);
+				Put p = prepareAndGetPut(t, entityClass, groupedFamilies, groupedFields, fields);
 				allPuts.add(p);
 			}
 			table.put(allPuts);
@@ -182,20 +177,17 @@ public class HbaseDriver {
 		return addUpdateDone;
 	}
 
-	private <T extends KVPersistable> List<Method> getApplicableGetterMethods(Class<T> entityClass) {
-		Method[] allMethods = entityClass.getDeclaredMethods();
-		List<Method> methods = Arrays.stream(allMethods)
-				.filter(m -> (m.getName().startsWith(GETTER_METHOD_PREFIX)
-						&& !m.getName().startsWith(GETTER_METHOD_PREFIX + UNDERSCORE)
-						&& !(m.getName().equals(GET_ROW_KEY))))
+	private <T extends KVPersistable> List<Field> getApplicableFields(Class<T> entityClass) {
+		Field[] allFields = entityClass.getDeclaredFields();
+		List<Field> fields = Arrays.stream(allFields).filter(f -> !(f.getName().equals(ROW_KEY)))
 				.collect(Collectors.toList());
-		methods.stream().forEach(m -> m.setAccessible(true));
-		return methods;
+		fields.forEach(f -> f.setAccessible(true));
+		return fields;
 	}
 
 	@SuppressWarnings("unchecked")
 	private <T extends KVPersistable> Put prepareAndGetPut(T t, Class<T> entityClass, List<String> groupedFamilies,
-			List<String> groupedFields, List<Method> methods)
+			List<String> groupedFields, List<Field> fields)
 			throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
 		Put p = null;
@@ -208,19 +200,16 @@ public class HbaseDriver {
 					ROW_KEY_NOT_DEFINED_FOR_ENTITY_CLASS + entityClass.getCanonicalName() + " Row Key:" + row_key);
 		}
 
-		for (Method method : methods) {
+		for (Field field : fields) {
 
-			String methodName = method.getName();
-
-			Object value = method.invoke(t);
+			String fieldName = field.getName();
+			Object value = field.get(t);
 
 			if (value != null) {
-				String family_column_string = methodName.split(GETTER_METHOD_PREFIX, 2)[1].toLowerCase();
-				String[] familyAndColumn = family_column_string.split(UNDERSCORE, 2);
+				String[] familyAndColumn = fieldName.split(UNDERSCORE, 2);
 				String family = familyAndColumn[0];
 
-				if (groupedFamilies.contains(family) && groupedFields.contains(family_column_string)) {
-
+				if (groupedFamilies.contains(family) && groupedFields.contains(fieldName)) {
 					Map<String, String> columnValuesMap = (Map<String, String>) value;
 					for (String columnName : columnValuesMap.keySet()) {
 						String columnValue = columnValuesMap.get(columnName);
@@ -675,12 +664,7 @@ public class HbaseDriver {
 		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
 		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
 		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
-
-		Pair<Map<String, Method>, Map<String, String>> setterMethodMapWithParameters = getSetterMethodMapWithParameters(
-				entityClass);
-		Map<String, Method> setterMethodsMap = setterMethodMapWithParameters.getValue0();
-		Map<String, String> parameterMethodsMap = setterMethodMapWithParameters.getValue1();
-		Set<String> setterMethodsMapKeySet = setterMethodsMap.keySet();
+		Map<String, Field> fieldsMap = getFieldsMap(entityClass);
 
 		List<T> queryResults = new ArrayList<T>();
 		Table table = null;
@@ -698,8 +682,7 @@ public class HbaseDriver {
 
 				Result result = iterator.next();
 				try {
-					prepareResults(entityClass, groupedFamilies, groupedFields, setterMethodsMap, parameterMethodsMap,
-							setterMethodsMapKeySet, queryResults, table, result);
+					prepareResults(entityClass, groupedFamilies, groupedFields, fieldsMap, queryResults, table, result);
 				} catch (Exception e) {
 					logger.error(EXCEPTION_OCCURED_WHILE_BUILDING_OBJECT_FOR + entityClass + "\n"
 							+ ExceptionUtils.getFullStackTrace(e));
@@ -720,7 +703,7 @@ public class HbaseDriver {
 		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
 		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
 		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
-		Set<String> setterMethodsMapKeySet = getSetterMethodNames(entityClass);
+		Set<String> fieldNamesSet = getFieldNames(entityClass);
 
 		List<Map<String, Object>> queryResults = new ArrayList<Map<String, Object>>();
 		Table table = null;
@@ -738,7 +721,7 @@ public class HbaseDriver {
 
 				Result result = iterator.next();
 				try {
-					prepareColumnOrientedResults(entityClass, groupedFamilies, groupedFields, setterMethodsMapKeySet,
+					prepareColumnOrientedResults(entityClass, groupedFamilies, groupedFields, fieldNamesSet,
 							queryResults, table, result, columns);
 				} catch (Exception e) {
 					logger.error(EXCEPTION_OCCURED_WHILE_BUILDING_OBJECT_FOR + entityClass + "\n"
@@ -776,29 +759,24 @@ public class HbaseDriver {
 		return groupedFamilyFieldsTuple;
 	}
 
-	private <T extends KVPersistable> Set<String> getSetterMethodNames(Class<T> entityClass) {
-		Method[] methods = entityClass.getDeclaredMethods();
-		Set<String> setterMethodsMapKeySet = Arrays.stream(methods)
-				.filter(m -> m.getName().startsWith(SETTER_METHOD_PREFIX)).map(m -> m.getName())
-				.collect(Collectors.toSet());
-		return setterMethodsMapKeySet;
+	private <T extends KVPersistable> Set<String> getFieldNames(Class<T> entityClass) {
+		Field[] fields = entityClass.getDeclaredFields();
+		Set<String> fieldNamesSet = Arrays.stream(fields).map(m -> m.getName()).collect(Collectors.toSet());
+		return fieldNamesSet;
 	}
 
-	private <T extends KVPersistable> Pair<Map<String, Method>, Map<String, String>> getSetterMethodMapWithParameters(
-			Class<T> entityClass) {
+	private <T extends KVPersistable> Map<String, Field> getFieldsMap(Class<T> entityClass) {
 
-		Map<String, Method> setterMethodsMap = new HashMap<String, Method>();
-		Map<String, String> parameterMethodsMap = new HashMap<String, String>();
+		Map<String, Field> fieldsMap = new HashMap<String, Field>();
 
-		Method[] methods = entityClass.getDeclaredMethods();
-		Arrays.stream(methods).filter(m -> m.getName().startsWith(SETTER_METHOD_PREFIX)).forEach((m -> {
-			m.setAccessible(true);
-			setterMethodsMap.put(m.getName(), m);
-			String expectedParameterTypeName = m.getParameterTypes()[0].getSimpleName();
-			parameterMethodsMap.put(m.getName(), expectedParameterTypeName);
-		}));
+		Field[] fields = entityClass.getDeclaredFields();
 
-		return new Pair<Map<String, Method>, Map<String, String>>(setterMethodsMap, parameterMethodsMap);
+		for (Field field : fields) {
+			field.setAccessible(true);
+			fieldsMap.put(field.getName(), field);
+		}
+
+		return fieldsMap;
 	}
 
 	private <T extends KVPersistable> T queryForId(String row_key, String queryTable, Class<T> entityClass,
@@ -809,11 +787,7 @@ public class HbaseDriver {
 		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
 		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
 
-		Pair<Map<String, Method>, Map<String, String>> setterMethodMapWithParameters = getSetterMethodMapWithParameters(
-				entityClass);
-		Map<String, Method> setterMethodsMap = setterMethodMapWithParameters.getValue0();
-		Map<String, String> parameterMethodsMap = setterMethodMapWithParameters.getValue1();
-		Set<String> setterMethodsMapKeySet = setterMethodsMap.keySet();
+		Map<String, Field> fieldsMap = getFieldsMap(entityClass);
 
 		List<T> queryResults = new ArrayList<T>();
 		Table table = null;
@@ -827,8 +801,7 @@ public class HbaseDriver {
 				logger.info(String.format(NO_MATCHING_RECORD_FOUND_BY_ID_IN_TABLE, row_key, queryTable));
 				return null;
 			}
-			prepareResults(entityClass, groupedFamilies, groupedFields, setterMethodsMap, parameterMethodsMap,
-					setterMethodsMapKeySet, queryResults, table, result);
+			prepareResults(entityClass, groupedFamilies, groupedFields, fieldsMap, queryResults, table, result);
 		} catch (Exception x) {
 			logger.error(EXCEPTION_OCCURED_WHILE_QUERYING_DATA + "Row Key:" + row_key + "\n"
 					+ ExceptionUtils.getFullStackTrace(x));
@@ -845,7 +818,7 @@ public class HbaseDriver {
 		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
 		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
 		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
-		Set<String> setterMethodsMapKeySet = getSetterMethodNames(entityClass);
+		Set<String> fieldNamesSet = getFieldNames(entityClass);
 
 		List<Map<String, Object>> queryResults = new ArrayList<Map<String, Object>>();
 		Table table = null;
@@ -860,8 +833,8 @@ public class HbaseDriver {
 				return null;
 			}
 
-			prepareColumnOrientedResults(entityClass, groupedFamilies, groupedFields, setterMethodsMapKeySet,
-					queryResults, table, result, columns);
+			prepareColumnOrientedResults(entityClass, groupedFamilies, groupedFields, fieldNamesSet, queryResults,
+					table, result, columns);
 		} catch (Exception x) {
 			logger.error(EXCEPTION_OCCURED_WHILE_QUERYING_DATA + " Row Key:" + row_key + "\n"
 					+ ExceptionUtils.getFullStackTrace(x));
@@ -872,7 +845,7 @@ public class HbaseDriver {
 	}
 
 	private <T extends KVPersistable> void prepareColumnOrientedResults(Class<T> entityClass,
-			List<String> groupedFamilies, List<String> groupedFields, Set<String> setterMethodsMapKeySet,
+			List<String> groupedFamilies, List<String> groupedFields, Set<String> fieldNames,
 			List<Map<String, Object>> queryResults, Table table, Result result, String... columns)
 			throws IOException, InstantiationException, IllegalAccessException {
 
@@ -900,8 +873,7 @@ public class HbaseDriver {
 					// Special case: if column family contains fixed fields
 					// apart from dynamic fields
 					List<String> askedColsList = Arrays.asList(columns);
-					if (setterMethodsMapKeySet.contains(
-							SETTER_METHOD_PREFIX + StringUtils.capitalize(columnFamily) + UNDERSCORE + column)) {
+					if (fieldNames.contains(columnFamily + UNDERSCORE + column)) {
 						if (askedColsList.contains(column)) {
 							columnValuesMap.put(column, value);
 						}
@@ -932,14 +904,14 @@ public class HbaseDriver {
 	}
 
 	private <T extends KVPersistable> void prepareResults(Class<T> entityClass, List<String> groupedFamilies,
-			List<String> groupedFields, Map<String, Method> setterMethodsMap, Map<String, String> parameterMethodsMap,
-			Set<String> setterMethodsMapKeySet, List<T> queryResults, Table table, Result result)
+			List<String> groupedFields, Map<String, Field> fieldsMap, List<T> queryResults, Table table, Result result)
 			throws IOException, InstantiationException, IllegalAccessException {
 
 		Map<String, Object> columnValuesMap = new HashMap<String, Object>();
 
 		String rowkey = Bytes.toString(result.getRow());
 		columnValuesMap.put(ROW_KEY, rowkey);
+		Set<String> fieldNameSet = fieldsMap.keySet();
 
 		for (Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> columnFamilyMap : result.getMap()
 				.entrySet()) {
@@ -959,13 +931,11 @@ public class HbaseDriver {
 
 					// Special case: if column family contains fixed fields
 					// apart from dynamic fields
-					if (setterMethodsMapKeySet.contains(
-							SETTER_METHOD_PREFIX + StringUtils.capitalize(columnFamily) + UNDERSCORE + column)) {
+					if (fieldNameSet.contains(columnFamily + UNDERSCORE + column)) {
 						columnValuesMap.put(columnFamily + UNDERSCORE + column, value);
 					} else {
 						groupedColumnValuesMap.put(column, value);
 					}
-
 				}
 
 				if (!groupedColumnValuesMap.isEmpty()) {
@@ -988,27 +958,23 @@ public class HbaseDriver {
 		T t = (T) entityClass.newInstance();
 
 		for (String column : columnValuesMap.keySet()) {
-
-			String setterMethodName = SETTER_METHOD_PREFIX + StringUtils.capitalize(column);
 			Object valueToBeSet = columnValuesMap.get(column);
-			Method setterMethod = setterMethodsMap.get(setterMethodName);
+			Field field = fieldsMap.get(column);
 
-			if (setterMethod != null) {
+			if (field != null) {
+
+				Object convertedValue = null;
+				if (valueToBeSet instanceof HashMap) {
+					convertedValue = valueToBeSet;
+				} else {
+					convertedValue = getValueForType((String) valueToBeSet, field.getType().getSimpleName());
+				}
+
 				try {
-					setterMethod.setAccessible(true);
-
-					Object convertedValue = null;
-
-					if (valueToBeSet instanceof HashMap) {
-						convertedValue = valueToBeSet;
-					} else {
-						convertedValue = getValueForType((String) valueToBeSet,
-								parameterMethodsMap.get(setterMethodName));
-					}
-					setterMethod.invoke(t, convertedValue);
+					field.set(t, convertedValue);
 				} catch (Exception x) {
-					logger.error(FAILED_TO_SET_FIELD_VALUE + setterMethodName + " Value:" + valueToBeSet + " Row Key:"
-							+ rowkey + " Entity:" + entityClass.getName());
+					logger.error(FAILED_TO_SET_FIELD_VALUE + column + " Value:" + valueToBeSet + " Row Key:" + rowkey
+							+ " Entity:" + entityClass.getName());
 				}
 			}
 
@@ -1025,21 +991,27 @@ public class HbaseDriver {
 		case "String":
 			return valueToBeSet;
 
+		case "short":
 		case "Short":
 			return Short.valueOf(valueToBeSet);
 
+		case "long":
 		case "Long":
 			return Long.valueOf(valueToBeSet);
 
+		case "int":
 		case "Integer":
 			return Integer.valueOf(valueToBeSet);
 
+		case "double":
 		case "Double":
 			return Double.valueOf(valueToBeSet);
 
+		case "float":
 		case "Float":
 			return Float.valueOf(valueToBeSet);
 
+		case "boolean":
 		case "Boolean":
 			return Boolean.valueOf(valueToBeSet);
 

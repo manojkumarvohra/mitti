@@ -77,6 +77,7 @@ public class HbaseDriverTest {
 			testEntity1.setBasic_name("Kishore Kumar");
 			testEntity1.setOther_entity_score(21.33F);
 			testEntity1.setOther_done_flag(true);
+			testEntity1.setVarcf_fixed_value("fixed1");
 			Map<String, String> groupedMap1 = new HashMap<String, String>();
 			groupedMap1.put("23", "Calcutta");
 			groupedMap1.put("14", "Dilli");
@@ -88,6 +89,7 @@ public class HbaseDriverTest {
 			testEntity2.setBasic_name("Arijit Singh");
 			testEntity2.setOther_entity_score(51.728F);
 			testEntity2.setOther_done_flag(false);
+			testEntity2.setVarcf_fixed_value("fixed2");
 			Map<String, String> groupedMap2 = new HashMap<String, String>();
 			groupedMap2.put("23", "Kolkata");
 			groupedMap2.put("14", "Delhi");
@@ -115,6 +117,7 @@ public class HbaseDriverTest {
 			testEntity3.setBasic_name("Sonu Nigam");
 			testEntity3.setOther_entity_score(31.7F);
 			testEntity3.setOther_done_flag(true);
+			testEntity3.setVarcf_fixed_value("fixed3");
 			Map<String, String> groupedMap3 = new HashMap<String, String>();
 			groupedMap3.put("43", "Calcutta");
 			groupedMap3.put("54", "Dilli");
@@ -126,6 +129,7 @@ public class HbaseDriverTest {
 			testEntity4.setBasic_name("Mohammed Rafi");
 			testEntity4.setOther_entity_score(617.48F);
 			testEntity4.setOther_done_flag(false);
+			testEntity4.setVarcf_fixed_value("fixed4");
 			Map<String, String> groupedMap4 = new HashMap<String, String>();
 			groupedMap4.put("73", "Shimla");
 			groupedMap4.put("94", "Manali");
@@ -137,6 +141,7 @@ public class HbaseDriverTest {
 			testEntity5.setBasic_name("Mohammed Shami");
 			testEntity5.setOther_entity_score(1007.9F);
 			testEntity5.setOther_done_flag(true);
+			testEntity5.setVarcf_fixed_value("fixed5");
 			Map<String, String> groupedMap5 = new HashMap<String, String>();
 			groupedMap5.put("73", "Bhatinda");
 			groupedMap5.put("94", "Kenchi");
@@ -183,7 +188,7 @@ public class HbaseDriverTest {
 	public void shouldGetAllSampleTestEntities() {
 
 		List<SampleEntity> actualEntities = hBaseDriver.query(ENTITY_TABLE, SampleEntity.class);
-		testEntity5.setBasic_age(null); // This is because age column is deleted above
+		testEntity5.setBasic_age(0); // This is because age column is deleted above
 		assertThat(actualEntities, hasItems(testEntity1, testEntity2, testEntity3, testEntity4, testEntity5));
 	}
 
@@ -219,8 +224,8 @@ public class HbaseDriverTest {
 		SampleEntity fetchedTestEntity = actualEntities.get(0);
 
 		// TEST: no other columns are being fetched
-		assertNull(fetchedTestEntity.getBasic_age());
-		assertNull(fetchedTestEntity.getOther_entity_score());
+		assertThat(fetchedTestEntity.getBasic_age(), is(0));
+		assertThat(fetchedTestEntity.getOther_entity_score(), is(0.0F));
 		assertNull(fetchedTestEntity.getVarcf());
 
 		// TEST: only row_key and name columns are being fetched
