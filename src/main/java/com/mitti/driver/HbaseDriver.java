@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.filter.FamilyFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,13 +85,31 @@ public class HbaseDriver {
 
 	public <T extends KVPersistable> boolean addUpdate(T t, String queryTable, Class<T> entityClass) {
 
+		/*
+		 * Checking if any dynamic cf grouping exists in the entity
+		 * 
+		 */
+		DynamicColumnFamily dynamicColumnFamilyFields = entityClass.getAnnotation(DynamicColumnFamily.class);
+		List<String> groupedFamilies = new LinkedList<String>();
+		List<String> groupedFields = new LinkedList<String>();
+		if (dynamicColumnFamilyFields != null) {
+			String[] groupedFieldsArr = dynamicColumnFamilyFields.fields();
+			for (String field : groupedFieldsArr) {
+				String family = field.split(UNDERSCORE, 2)[0];
+				groupedFamilies.add(family.toLowerCase());
+				groupedFields.add(field.toLowerCase());
+			}
+		}
+
+		List<Method> methods = getApplicableGetterMethods(entityClass);
+
 		Table table = null;
 		boolean addUpdateDone = false;
 
 		try {
 
 			table = connection.getTable(TableName.valueOf(tablePrefix + queryTable));
-			Put p = prepareAndGetPut(t, entityClass);
+			Put p = prepareAndGetPut(t, entityClass, groupedFamilies, groupedFields, methods);
 			table.put(p);
 			addUpdateDone = true;
 		} catch (NullPointerException e) {
@@ -113,8 +132,25 @@ public class HbaseDriver {
 
 	public <T extends KVPersistable> boolean addUpdateAll(List<T> arrT, String queryTable, Class<T> entityClass) {
 
-		Table table = null;
+		/*
+		 * Checking if any dynamic cf grouping exists in the entity
+		 * 
+		 */
+		DynamicColumnFamily dynamicColumnFamilyFields = entityClass.getAnnotation(DynamicColumnFamily.class);
+		List<String> groupedFamilies = new LinkedList<String>();
+		List<String> groupedFields = new LinkedList<String>();
+		if (dynamicColumnFamilyFields != null) {
+			String[] groupedFieldsArr = dynamicColumnFamilyFields.fields();
+			for (String field : groupedFieldsArr) {
+				String family = field.split(UNDERSCORE, 2)[0];
+				groupedFamilies.add(family.toLowerCase());
+				groupedFields.add(field.toLowerCase());
+			}
+		}
 
+		List<Method> methods = getApplicableGetterMethods(entityClass);
+
+		Table table = null;
 		boolean addUpdateDone = false;
 		T currentT = null;
 		try {
@@ -123,7 +159,7 @@ public class HbaseDriver {
 			List<Put> allPuts = new ArrayList<Put>();
 			for (T t : arrT) {
 				currentT = t;
-				Put p = prepareAndGetPut(t, entityClass);
+				Put p = prepareAndGetPut(t, entityClass, groupedFamilies, groupedFields, methods);
 				allPuts.add(p);
 			}
 			table.put(allPuts);
@@ -146,25 +182,20 @@ public class HbaseDriver {
 		return addUpdateDone;
 	}
 
-	@SuppressWarnings("unchecked")
-	private <T extends KVPersistable> Put prepareAndGetPut(T t, Class<T> entityClass)
-			throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+	private <T extends KVPersistable> List<Method> getApplicableGetterMethods(Class<T> entityClass) {
+		Method[] allMethods = entityClass.getDeclaredMethods();
+		List<Method> methods = Arrays.stream(allMethods)
+				.filter(m -> (m.getName().startsWith(GETTER_METHOD_PREFIX)
+						&& !m.getName().startsWith(GETTER_METHOD_PREFIX + UNDERSCORE)
+						&& !(m.getName().equals(GET_ROW_KEY))))
+				.collect(Collectors.toList());
+		return methods;
+	}
 
-		/*
-		 * Checking if any dynamic cf grouping exists in the entity
-		 * 
-		 */
-		DynamicColumnFamily dynamicColumnFamilyFields = entityClass.getAnnotation(DynamicColumnFamily.class);
-		List<String> groupedFamilies = new LinkedList<String>();
-		List<String> groupedFields = new LinkedList<String>();
-		if (dynamicColumnFamilyFields != null) {
-			String[] groupedFieldsArr = dynamicColumnFamilyFields.fields();
-			for (String field : groupedFieldsArr) {
-				String family = field.split(UNDERSCORE, 2)[0];
-				groupedFamilies.add(family.toLowerCase());
-				groupedFields.add(field.toLowerCase());
-			}
-		}
+	@SuppressWarnings("unchecked")
+	private <T extends KVPersistable> Put prepareAndGetPut(T t, Class<T> entityClass, List<String> groupedFamilies,
+			List<String> groupedFields, List<Method> methods)
+			throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
 		Put p = null;
 
@@ -175,14 +206,6 @@ public class HbaseDriver {
 			throw new IllegalArgumentException(
 					ROW_KEY_NOT_DEFINED_FOR_ENTITY_CLASS + entityClass.getCanonicalName() + " Row Key:" + row_key);
 		}
-
-		Method[] allMethods = entityClass.getDeclaredMethods();
-
-		List<Method> methods = Arrays.stream(allMethods)
-				.filter(m -> (m.getName().startsWith(GETTER_METHOD_PREFIX)
-						&& !m.getName().startsWith(GETTER_METHOD_PREFIX + UNDERSCORE)
-						&& !(m.getName().equals(GET_ROW_KEY))))
-				.collect(Collectors.toList());
 
 		for (Method method : methods) {
 
@@ -648,6 +671,16 @@ public class HbaseDriver {
 			throws IOException, InstantiationException, IllegalAccessException, IllegalArgumentException,
 			InvocationTargetException {
 
+		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
+		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
+		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
+
+		Pair<Map<String, Method>, Map<String, String>> setterMethodMapWithParameters = getSetterMethodMapWithParameters(
+				entityClass);
+		Map<String, Method> setterMethodsMap = setterMethodMapWithParameters.getValue0();
+		Map<String, String> parameterMethodsMap = setterMethodMapWithParameters.getValue1();
+		Set<String> setterMethodsMapKeySet = setterMethodsMap.keySet();
+
 		List<T> queryResults = new ArrayList<T>();
 		Table table = null;
 
@@ -664,7 +697,8 @@ public class HbaseDriver {
 
 				Result result = iterator.next();
 				try {
-					prepareResults(entityClass, queryResults, table, result);
+					prepareResults(entityClass, groupedFamilies, groupedFields, setterMethodsMap, parameterMethodsMap,
+							setterMethodsMapKeySet, queryResults, table, result);
 				} catch (Exception e) {
 					logger.error(EXCEPTION_OCCURED_WHILE_BUILDING_OBJECT_FOR + entityClass + "\n"
 							+ ExceptionUtils.getFullStackTrace(e));
@@ -682,6 +716,11 @@ public class HbaseDriver {
 			Class<T> entityClass, Scan scan, String... columns) throws IOException, InstantiationException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
+		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
+		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
+		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
+		Set<String> setterMethodsMapKeySet = getSetterMethodNames(entityClass);
+
 		List<Map<String, Object>> queryResults = new ArrayList<Map<String, Object>>();
 		Table table = null;
 
@@ -698,7 +737,8 @@ public class HbaseDriver {
 
 				Result result = iterator.next();
 				try {
-					prepareColumnOrientedResults(entityClass, queryResults, table, result, columns);
+					prepareColumnOrientedResults(entityClass, groupedFamilies, groupedFields, setterMethodsMapKeySet,
+							queryResults, table, result, columns);
 				} catch (Exception e) {
 					logger.error(EXCEPTION_OCCURED_WHILE_BUILDING_OBJECT_FOR + entityClass + "\n"
 							+ ExceptionUtils.getFullStackTrace(e));
@@ -712,9 +752,66 @@ public class HbaseDriver {
 		return queryResults;
 	}
 
+	private <T extends KVPersistable> Pair<List<String>, List<String>> getGroupedColumnFamiliesAndFields(
+			Class<T> entityClass) {
+		/*
+		 * Checking if any dynamic cf grouping exists in the entity
+		 * 
+		 */
+
+		DynamicColumnFamily dynamicColumnFamilyFields = entityClass.getAnnotation(DynamicColumnFamily.class);
+		List<String> grpdFamilies = new LinkedList<String>();
+		List<String> grpdFields = new LinkedList<String>();
+		if (dynamicColumnFamilyFields != null) {
+			String[] groupedFieldsArr = dynamicColumnFamilyFields.fields();
+			for (String field : groupedFieldsArr) {
+				String family = field.split(UNDERSCORE, 2)[0];
+				grpdFamilies.add(family.toLowerCase());
+				grpdFields.add(field.toLowerCase());
+			}
+		}
+		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = new Pair<List<String>, List<String>>(grpdFamilies,
+				grpdFields);
+		return groupedFamilyFieldsTuple;
+	}
+
+	private <T extends KVPersistable> Set<String> getSetterMethodNames(Class<T> entityClass) {
+		Method[] methods = entityClass.getDeclaredMethods();
+		Set<String> setterMethodsMapKeySet = Arrays.stream(methods)
+				.filter(m -> m.getName().startsWith(SETTER_METHOD_PREFIX)).map(m -> m.getName())
+				.collect(Collectors.toSet());
+		return setterMethodsMapKeySet;
+	}
+
+	private <T extends KVPersistable> Pair<Map<String, Method>, Map<String, String>> getSetterMethodMapWithParameters(
+			Class<T> entityClass) {
+
+		Map<String, Method> setterMethodsMap = new HashMap<String, Method>();
+		Map<String, String> parameterMethodsMap = new HashMap<String, String>();
+
+		Method[] methods = entityClass.getDeclaredMethods();
+		Arrays.stream(methods).filter(m -> m.getName().startsWith(SETTER_METHOD_PREFIX)).forEach((m -> {
+			setterMethodsMap.put(m.getName(), m);
+			String expectedParameterTypeName = m.getParameterTypes()[0].getSimpleName();
+			parameterMethodsMap.put(m.getName(), expectedParameterTypeName);
+		}));
+
+		return new Pair<Map<String, Method>, Map<String, String>>(setterMethodsMap, parameterMethodsMap);
+	}
+
 	private <T extends KVPersistable> T queryForId(String row_key, String queryTable, Class<T> entityClass,
 			Get getForId) throws IOException, InstantiationException, IllegalAccessException, IllegalArgumentException,
 			InvocationTargetException {
+
+		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
+		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
+		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
+
+		Pair<Map<String, Method>, Map<String, String>> setterMethodMapWithParameters = getSetterMethodMapWithParameters(
+				entityClass);
+		Map<String, Method> setterMethodsMap = setterMethodMapWithParameters.getValue0();
+		Map<String, String> parameterMethodsMap = setterMethodMapWithParameters.getValue1();
+		Set<String> setterMethodsMapKeySet = setterMethodsMap.keySet();
 
 		List<T> queryResults = new ArrayList<T>();
 		Table table = null;
@@ -728,8 +825,8 @@ public class HbaseDriver {
 				logger.info(String.format(NO_MATCHING_RECORD_FOUND_BY_ID_IN_TABLE, row_key, queryTable));
 				return null;
 			}
-
-			prepareResults(entityClass, queryResults, table, result);
+			prepareResults(entityClass, groupedFamilies, groupedFields, setterMethodsMap, parameterMethodsMap,
+					setterMethodsMapKeySet, queryResults, table, result);
 		} catch (Exception x) {
 			logger.error(EXCEPTION_OCCURED_WHILE_QUERYING_DATA + "Row Key:" + row_key + "\n"
 					+ ExceptionUtils.getFullStackTrace(x));
@@ -742,6 +839,11 @@ public class HbaseDriver {
 	private <T extends KVPersistable> Map<String, Object> queryColumnOrientedResultsForId(String row_key,
 			String queryTable, Class<T> entityClass, Get getForId, String... columns) throws IOException,
 			InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+
+		Pair<List<String>, List<String>> groupedFamilyFieldsTuple = getGroupedColumnFamiliesAndFields(entityClass);
+		List<String> groupedFamilies = groupedFamilyFieldsTuple.getValue0();
+		List<String> groupedFields = groupedFamilyFieldsTuple.getValue1();
+		Set<String> setterMethodsMapKeySet = getSetterMethodNames(entityClass);
 
 		List<Map<String, Object>> queryResults = new ArrayList<Map<String, Object>>();
 		Table table = null;
@@ -756,7 +858,8 @@ public class HbaseDriver {
 				return null;
 			}
 
-			prepareColumnOrientedResults(entityClass, queryResults, table, result, columns);
+			prepareColumnOrientedResults(entityClass, groupedFamilies, groupedFields, setterMethodsMapKeySet,
+					queryResults, table, result, columns);
 		} catch (Exception x) {
 			logger.error(EXCEPTION_OCCURED_WHILE_QUERYING_DATA + " Row Key:" + row_key + "\n"
 					+ ExceptionUtils.getFullStackTrace(x));
@@ -767,45 +870,9 @@ public class HbaseDriver {
 	}
 
 	private <T extends KVPersistable> void prepareColumnOrientedResults(Class<T> entityClass,
+			List<String> groupedFamilies, List<String> groupedFields, Set<String> setterMethodsMapKeySet,
 			List<Map<String, Object>> queryResults, Table table, Result result, String... columns)
 			throws IOException, InstantiationException, IllegalAccessException {
-
-		/*
-		 * Checking if any dynamic cf grouping exists in the entity
-		 * 
-		 */
-		DynamicColumnFamily dynamicColumnFamilyFields = entityClass.getAnnotation(DynamicColumnFamily.class);
-		List<String> groupedFamilies = new LinkedList<String>();
-		List<String> groupedFields = new LinkedList<String>();
-		if (dynamicColumnFamilyFields != null) {
-			String[] groupedFieldsArr = dynamicColumnFamilyFields.fields();
-			for (String field : groupedFieldsArr) {
-				String family = field.split(UNDERSCORE, 2)[0];
-				groupedFamilies.add(family.toLowerCase());
-				groupedFields.add(field.toLowerCase());
-			}
-		}
-
-		/*
-		 * Build setter method map (once)
-		 * 
-		 */
-		Map<String, Method> setterMethodsMap = new HashMap<String, Method>();
-		Map<String, String> parameterMethodsMap = new HashMap<String, String>();
-		Method[] methods = entityClass.getDeclaredMethods();
-
-		for (Method method : methods) {
-
-			String name = method.getName();
-
-			if (name.startsWith(SETTER_METHOD_PREFIX)) {
-				setterMethodsMap.put(name, method);
-				String expectedParameterTypeName = method.getParameterTypes()[0].getSimpleName();
-				parameterMethodsMap.put(name, expectedParameterTypeName);
-			}
-		}
-
-		Set<String> setterMethodsMapKeySet = setterMethodsMap.keySet();
 
 		Map<String, Object> columnValuesMap = new HashMap<String, Object>();
 
@@ -862,45 +929,10 @@ public class HbaseDriver {
 		queryResults.add(columnValuesMap);
 	}
 
-	private <T extends KVPersistable> void prepareResults(Class<T> entityClass, List<T> queryResults, Table table,
-			Result result) throws IOException, InstantiationException, IllegalAccessException {
-
-		/*
-		 * Checking if any dynamic cf grouping exists in the entity
-		 * 
-		 */
-		DynamicColumnFamily dynamicColumnFamilyFields = entityClass.getAnnotation(DynamicColumnFamily.class);
-		List<String> groupedFamilies = new LinkedList<String>();
-		List<String> groupedFields = new LinkedList<String>();
-		if (dynamicColumnFamilyFields != null) {
-			String[] groupedFieldsArr = dynamicColumnFamilyFields.fields();
-			for (String field : groupedFieldsArr) {
-				String family = field.split(UNDERSCORE, 2)[0];
-				groupedFamilies.add(family.toLowerCase());
-				groupedFields.add(field.toLowerCase());
-			}
-		}
-
-		/*
-		 * Build setter method map (once)
-		 * 
-		 */
-		Map<String, Method> setterMethodsMap = new HashMap<String, Method>();
-		Map<String, String> parameterMethodsMap = new HashMap<String, String>();
-		Method[] methods = entityClass.getDeclaredMethods();
-
-		for (Method method : methods) {
-
-			String name = method.getName();
-
-			if (name.startsWith(SETTER_METHOD_PREFIX)) {
-				setterMethodsMap.put(name, method);
-				String expectedParameterTypeName = method.getParameterTypes()[0].getSimpleName();
-				parameterMethodsMap.put(name, expectedParameterTypeName);
-			}
-		}
-
-		Set<String> setterMethodsMapKeySet = setterMethodsMap.keySet();
+	private <T extends KVPersistable> void prepareResults(Class<T> entityClass, List<String> groupedFamilies,
+			List<String> groupedFields, Map<String, Method> setterMethodsMap, Map<String, String> parameterMethodsMap,
+			Set<String> setterMethodsMapKeySet, List<T> queryResults, Table table, Result result)
+			throws IOException, InstantiationException, IllegalAccessException {
 
 		Map<String, Object> columnValuesMap = new HashMap<String, Object>();
 
